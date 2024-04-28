@@ -13,6 +13,7 @@ import lombok.Getter;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.MatchResult;
 
 @Getter
 @Builder
@@ -67,6 +68,57 @@ public class Security {
             throw new InvalidRequestException(Message.ORDER_CANNOT_BE_BOTH_A_STOP_LIMIT_AND_AN_ICEBERG);
         return matcher.processOrder(order);
     }
+
+
+    public MatchResult handleOrderCreation(EnterOrderRequest enterOrderRequest, Brokerage intermediary, Shareholder investor, OrderProcessor orderProcessor) throws InvalidOrderException {
+    if (enterOrderRequest.getSide() == Side.SELL &&
+            !investor.hasSufficientPositionsWithin(this,
+                    orderBook.totalSellQuantityByInvestor(investor) + enterOrderRequest.getQuantity())) {
+        return MatchResult.insufficientPositions();
+    }
+
+    Order order;
+    if (enterOrderRequest.getPeakSize() == 0 && enterOrderRequest.getStopPrice() == 0) {
+        order = createSimpleOrder(enterOrderRequest.getOrderId(), this, enterOrderRequest.getSide(),
+                enterOrderRequest.getQuantity(), enterOrderRequest.getPrice(), intermediary, investor, enterOrderRequest.getEntryTime(), enterOrderRequest.getMinimumExecutionQuantity());
+    } else if (enterOrderRequest.getPeakSize() != 0 && enterOrderRequest.getStopPrice() == 0) {
+        order = createIcebergOrder(enterOrderRequest.getOrderId(), this, enterOrderRequest.getSide(),
+                enterOrderRequest.getQuantity(), enterOrderRequest.getPrice(), intermediary, investor,
+                enterOrderRequest.getEntryTime(), enterOrderRequest.getPeakSize(), enterOrderRequest.getMinimumExecutionQuantity());
+    } else if (enterOrderRequest.getStopPrice() != 0 && enterOrderRequest.getPeakSize() == 0) {
+        StopLimitOrder stopLimitOrder = createStopLimitOrder(enterOrderRequest.getOrderId(), this, enterOrderRequest.getSide(),
+                enterOrderRequest.getQuantity(), enterOrderRequest.getPrice(), intermediary, investor,
+                enterOrderRequest.getEntryTime(), enterOrderRequest.getMinimumExecutionQuantity(),
+                enterOrderRequest.getStopPrice());
+        if ((stopLimitOrder.getSide() == Side.BUY && stopLimitOrder.getStopPrice() <= lastTransactionPrice) || (stopLimitOrder.getSide() == Side.SELL && stopLimitOrder.getStopPrice() >= lastTransactionPrice)) {
+            order = stopLimitOrder;
+        } else {
+            if (stopLimitOrder.getSide() == Side.BUY) {
+                if (!stopLimitOrder.getBroker().hasSufficientCredit(stopLimitOrder.getValue())) {
+                    return MatchResult.insufficientCredit();
+                }
+            }
+            inactiveOrderBook.enqueue(stopLimitOrder);
+            return MatchResult.queuedAsInactive();
+        }
+    } else {
+        throw new InvalidOrderException(Message.ORDER_CANNOT_BE_BOTH_STOP_LIMIT_AND_ICEBERG);
+    }
+    return orderProcessor.processOrder(order);
+}
+
+private Order createSimpleOrder(String orderId, OrderBook orderBook, Side side, int quantity, double price, Brokerage intermediary, Shareholder investor, long entryTime, int minimumExecutionQuantity) {
+   return new Order(orderId, orderBook, side, quantity, price, intermediary, investor, entryTime, minimumExecutionQuantity);
+}
+
+private Order createIcebergOrder(String orderId, OrderBook orderBook, Side side, int quantity, double price, Brokerage intermediary, Shareholder investor, long entryTime, int peakSize, int minimumExecutionQuantity) {
+    // Implementation for creating an iceberg order
+}
+
+private StopLimitOrder createStopLimitOrder(String orderId, OrderBook orderBook, Side side, int quantity, double price, Brokerage intermediary, Shareholder investor, long entryTime, int minimumExecutionQuantity, double stopPrice) {
+    // Implementation for creating a stop-limit order
+}
+
 
     public void deleteOrder(DeleteOrderRq deleteOrderRq) throws InvalidRequestException {
         Order order = orderBook.findByOrderId(deleteOrderRq.getSide(), deleteOrderRq.getOrderId());
@@ -158,17 +210,6 @@ public class Security {
     }
 
 
-//    public LinkedList<MatchResult> runExecutableOrders(Matcher matcher){
-//        LinkedList<MatchResult> results = new LinkedList<>();
-//        while (!executableOrders.isEmpty()){
-//            MatchResult matchResult = matcher.execute(executableOrders.removeFirst());
-//            if (!matchResult.getTrades().isEmpty()) {
-//                checkExecutableOrders(matchResult);
-//            }
-//            results.add(matchResult);
-//        }
-//        return results;
-//    }
 
     public LinkedList<MatchResult> handleExecutableOrders(Matcher matcher) {
         LinkedList<MatchResult> outcomes = new LinkedList<>();
