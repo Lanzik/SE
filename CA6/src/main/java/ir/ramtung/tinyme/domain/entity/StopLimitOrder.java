@@ -32,7 +32,7 @@ public class StopLimitOrder extends Order{
         }
     }
 
-    public boolean mustBeActive(int lastTransactionPrice){
+    public boolean isInactive(int lastTransactionPrice){
         if (side == Side.BUY)
             return StopPrice < lastTransactionPrice;
         else

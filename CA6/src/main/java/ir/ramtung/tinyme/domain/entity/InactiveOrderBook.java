@@ -1,6 +1,8 @@
 package ir.ramtung.tinyme.domain.entity;
 
 import java.util.LinkedList;
+import java.util.*;
+
 
 public class InactiveOrderBook extends OrderBook {
 
@@ -11,7 +13,7 @@ public class InactiveOrderBook extends OrderBook {
     public StopLimitOrder peekFirstInactiveOrder(Side side, int lastTransactionPrice) {
         var queue = getQueue(side);
         StopLimitOrder stopLimitOrder = (StopLimitOrder) queue.getFirst();
-        if (stopLimitOrder.mustBeActive(lastTransactionPrice)){
+        if (stopLimitOrder.isInactive(lastTransactionPrice)){
             return stopLimitOrder;
         }
         else{
@@ -19,9 +21,11 @@ public class InactiveOrderBook extends OrderBook {
         }
     }
 
-    public void ActivateQualifiedOrders(Side side, int lastTransactionPrice) {
+    public void activateEligibleOrders(Side side, int lastTransactionPrice) {
         var queue = getQueue(side);
-        while (!queue.isEmpty()) {}
+        while (!queue.isEmpty()) {
+            // Activation logic goes here
+        }
     }
 
     @Override
@@ -35,3 +39,4 @@ public class InactiveOrderBook extends OrderBook {
     }
 
 }
+
