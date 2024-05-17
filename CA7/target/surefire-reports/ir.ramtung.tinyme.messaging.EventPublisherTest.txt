@@ -1,0 +1,31 @@
+-------------------------------------------------------------------------------
+Test set: ir.ramtung.tinyme.messaging.EventPublisherTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 4.450 s <<< FAILURE! -- in ir.ramtung.tinyme.messaging.EventPublisherTest
+ir.ramtung.tinyme.messaging.EventPublisherTest.response_channel_integration_works -- Time elapsed: 1.222 s <<< ERROR!
+org.springframework.jms.UncategorizedJmsException: Uncategorized exception occurred during JMS processing; nested exception is ActiveMQNotConnectedException[errorType=NOT_CONNECTED message=AMQ219007: Cannot connect to server(s). Tried with all available servers.]
+	at org.springframework.jms.support.JmsUtils.convertJmsAccessException(JmsUtils.java:311)
+	at org.springframework.jms.support.JmsAccessor.convertJmsAccessException(JmsAccessor.java:199)
+	at org.springframework.jms.core.JmsTemplate.execute(JmsTemplate.java:533)
+	at org.springframework.jms.core.JmsTemplate.receiveSelected(JmsTemplate.java:773)
+	at org.springframework.jms.core.JmsTemplate.receive(JmsTemplate.java:749)
+	at ir.ramtung.tinyme.messaging.EventPublisherTest.emptyResponseQueue(EventPublisherTest.java:35)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+Caused by: jakarta.jms.JMSException: Failed to create session factory
+	at org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory.createConnectionInternal(ActiveMQConnectionFactory.java:891)
+	at org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory.createConnection(ActiveMQConnectionFactory.java:290)
+	at org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory.createConnection(ActiveMQConnectionFactory.java:285)
+	at org.springframework.jms.connection.SingleConnectionFactory.doCreateConnection(SingleConnectionFactory.java:452)
+	at org.springframework.jms.connection.SingleConnectionFactory.initConnection(SingleConnectionFactory.java:414)
+	at org.springframework.jms.connection.SingleConnectionFactory.getConnection(SingleConnectionFactory.java:328)
+	at org.springframework.jms.connection.SingleConnectionFactory.createConnection(SingleConnectionFactory.java:243)
+	at org.springframework.jms.support.JmsAccessor.createConnection(JmsAccessor.java:211)
+	at org.springframework.jms.core.JmsTemplate.execute(JmsTemplate.java:517)
+	... 6 more
+Caused by: ActiveMQNotConnectedException[errorType=NOT_CONNECTED message=AMQ219007: Cannot connect to server(s). Tried with all available servers.]
+	at org.apache.activemq.artemis.core.client.impl.ServerLocatorImpl.createSessionFactory(ServerLocatorImpl.java:726)
+	at org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory.createConnectionInternal(ActiveMQConnectionFactory.java:889)
+	... 14 more
+
