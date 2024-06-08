@@ -61,7 +61,7 @@ public class Security {
                     enterOrderRq.getQuantity(), enterOrderRq.getPrice(), broker, shareholder,
                     enterOrderRq.getEntryTime(), enterOrderRq.getStopPrice() );
             order.setRequestId(enterOrderRq.getRequestId());
-            if (!checkOrderPossibility(order)) { //kasif !!!!!!!!!!
+            if (!checkOrderPossibility(order)) {
                 return (order.getSide() == Side.BUY) ? MatchResult.notEnoughCredit() : MatchResult.notEnoughPositions();
             }
             if((order instanceof StopLimitOrder) && !((StopLimitOrder)order).checkActivation(orderBook.getLastTradePrice())){
@@ -119,80 +119,34 @@ public class Security {
         }
         return order;
     }
-
     public MatchResult updateOrder(EnterOrderRq updateOrderRq, Matcher matcher) throws InvalidRequestException {
         Order order = getOrderForUpdate(updateOrderRq);
+        validateOrderUpdate(order, updateOrderRq);
+        updateOrderAttributes(order, updateOrderRq);
+        MatchResult matchResult = executeOrderUpdates(order, matcher);
+        return matchResult;
+    }
 
-        if ((order instanceof IcebergOrder) && updateOrderRq.getPeakSize() == 0)
+    private void validateOrderUpdate(Order order, EnterOrderRq updateOrderRq) throws InvalidRequestException {
+        if (order instanceof IcebergOrder && updateOrderRq.getPeakSize() == 0) {
             throw new InvalidRequestException(Message.INVALID_PEAK_SIZE);
-        if (!(order instanceof IcebergOrder) && updateOrderRq.getPeakSize() != 0)
-            throw new InvalidRequestException(Message.CANNOT_SPECIFY_PEAK_SIZE_FOR_A_NON_ICEBERG_ORDER);
-        if ((order instanceof StopLimitOrder) && (orderBook.findByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId()) != null)){ 
-            throw new InvalidRequestException(Message.UPDATING_REJECTED_BECAUSE_THE_STOP_LIMIT_ORDER_IS_ACTIVE);
         }
-        if ((order instanceof StopLimitOrder) && updateOrderRq.getStopPrice() == 0){
-            throw new InvalidRequestException(Message.UPDATING_REJECTED_BECAUSE_IT_IS_NOT_STOP_LIMIT_ORDER);
-        }
-        if (!(order instanceof StopLimitOrder) && updateOrderRq.getStopPrice() > 0){
-            throw new InvalidRequestException(Message.UPDATING_REJECTED_BECAUSE_IT_IS_NOT_STOP_LIMIT_ORDER);
-        }
-        if ((order instanceof StopLimitOrder) && (updateOrderRq.getMinimumExecutionQuantity() != 0) && (order.getMinimumExecutionQuantity() == 0)){
-            throw new InvalidRequestException(Message.STOP_LIMIT_ORDER_CANT_MEQ);
-        }
-        if ((order instanceof StopLimitOrder) && (updateOrderRq.getPeakSize() != 0) ){
-            throw new InvalidRequestException(Message.STOP_LIMIT_ORDER_CANT_BE_ICEBERG);
-        }
-        if (order.getMinimumExecutionQuantity() != updateOrderRq.getMinimumExecutionQuantity())
-            throw new InvalidRequestException(Message.CAN_NOT_UPDATE_ORDER_MINIMUM_EXECUTION_QUANTITY);
+    }
 
-        if (updateOrderRq.getSide() == Side.SELL &&
-                !order.getShareholder().hasEnoughPositionsOn(this,
-                        orderBook.totalSellQuantityByShareholder(order.getShareholder()) - order.getQuantity() + updateOrderRq.getQuantity())) {
-            return MatchResult.notEnoughPositions();
-        }
+    private void updateOrderAttributes(Order order, EnterOrderRq updateOrderRq) {
 
-        boolean losesPriority = order.isQuantityIncreased(updateOrderRq.getQuantity())
-                || updateOrderRq.getPrice() != order.getPrice()
-                || ((order instanceof IcebergOrder icebergOrder) && (icebergOrder.getPeakSize() < updateOrderRq.getPeakSize()));
+        order.setPrice(updateOrderRq.getPrice());
+        order.setQuantity(updateOrderRq.getQuantity());
+        order.setMinimumExecutionQuantity(updateOrderRq.getMinimumExecutionQuantity());
 
-        if (updateOrderRq.getSide() == Side.BUY) {
-            order.getBroker().increaseCreditBy(order.getValue());
-        }
-        Order originalOrder = order.snapshot();
-        order.updateFromRequest(updateOrderRq);
-        if (!losesPriority && updateOrderRq.getStopPrice() == 0) {
-            if (updateOrderRq.getSide() == Side.BUY) {
-                order.getBroker().decreaseCreditBy(order.getValue());
-            }
-            return MatchResult.executed(null, List.of()); //check
-        }
-        else{
-            order.markAsUpdating();
-        }
-        if (updateOrderRq.getStopPrice() > 0){
-            orderBook.removeInActiveStopLimitByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
-            if(!((StopLimitOrder)order).checkActivation(orderBook.getLastTradePrice())){
-                return handleInactiveStopLimitOrder(order);
-            }
-        }
-        else{
-            orderBook.removeByOrderId(updateOrderRq.getSide(), updateOrderRq.getOrderId());
-        }
-        if(matchingState == MatchingState.CONTINUOUS){
-            MatchResult matchResult = matcher.execute(order);
-            if (matchResult.outcome() != MatchingOutcome.EXECUTED) {
-                orderBook.enqueueActiveStopLimitOrder(originalOrder);
-                if (updateOrderRq.getSide() == Side.BUY) {
-                    originalOrder.getBroker().decreaseCreditBy(originalOrder.getValue());
-                }
-            }
-            return matchResult;
-        }
-        else{
-            MatchResult matchResult = matcher.auctionAddToQueue(order);
-            return matchResult;
-        }
+    }
 
+    private MatchResult executeOrderUpdates(Order order, Matcher matcher) {
+        if (matchingState == MatchingState.CONTINUOUS) {
+            return matcher.execute(order);
+        } else {
+            return matcher.auctionAddToQueue(order);
+        }
     }
 
 

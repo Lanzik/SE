@@ -190,7 +190,7 @@ public class OrderBook {
             }
         }
     }
-    
+
 
     public void enqueueByQueue(Order order, List<Order> queue, Predicate<Order> condition) {
 
