@@ -168,35 +168,29 @@ public class Security {
         return MatchResult.inactiveOrderEnqueued();
     }
     public MatchResult ChangeMatchStateRq(MatchingState state, Matcher matcher) {
+        if (state == matchingState) {
+            return null;
+        }
 
-        // Handle state change based on current state and requested state
         switch (matchingState) {
             case CONTINUOUS:
                 if (state == MatchingState.AUCTION) {
                     updateIndicativeOpeningPrice();
                     MatchResult matchResult = openingProcess(matcher);
-                    matchingState = MatchingState.AUCTION;
+                    matchingState = state;
                     return matchResult;
                 }
-                // No change needed for CONTINUOUS to CONTINUOUS
                 break;
             case AUCTION:
+                // No action needed for switching from AUCTION to CONTINUOUS
                 if (state == MatchingState.CONTINUOUS) {
-                    // No action needed (auction already in progress) - optional logging/message
-                } else if (state == MatchingState.AUCTION) {
-                    updateIndicativeOpeningPrice();
-                    MatchResult matchResult = openingProcess(matcher);
-                    matchingState = MatchingState.AUCTION;
-                    return matchResult;
+                    // Optional logging/message about ignoring change
                 }
                 break;
             default:
-                // Handle unexpected state or log an error message
                 throw new IllegalArgumentException("Invalid MatchingState: " + matchingState);
         }
-
-        // If no state change occurred, return null (or consider returning a specific result for clarity)
-        return null;
+        throw new IllegalStateException("Unhandled state transition from " + matchingState + " to " + state);
     }
 
     private MatchResult openingProcess(Matcher matcher) {
