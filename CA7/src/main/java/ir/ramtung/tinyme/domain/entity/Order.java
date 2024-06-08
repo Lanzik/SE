@@ -25,21 +25,7 @@ public class Order {
     @Builder.Default
     protected OrderStatus status = OrderStatus.NEW;
     protected int minimumExecutionQuantity;
-    protected boolean isNew = true;
-
-    public Order(long orderId, Security security, Side side, int quantity, int price, Broker broker, Shareholder shareholder, LocalDateTime entryTime, OrderStatus status, int minimumExecutionQuantity, boolean isNew) {
-        this.orderId = orderId;
-        this.security = security;
-        this.side = side;
-        this.quantity = quantity;
-        this.price = price;
-        this.entryTime = entryTime;
-        this.broker = broker;
-        this.shareholder = shareholder;
-        this.status = status;
-        this.minimumExecutionQuantity = minimumExecutionQuantity;
-        this.isNew = isNew;
-    }
+    protected long requestId;
 
     public Order(long orderId, Security security, Side side, int quantity, int price, Broker broker, Shareholder shareholder, LocalDateTime entryTime, OrderStatus status, int minimumExecutionQuantity) {
         this.orderId = orderId;
@@ -54,6 +40,20 @@ public class Order {
         this.minimumExecutionQuantity = minimumExecutionQuantity;
     }
 
+    public Order(long orderId, Security security, Side side, int quantity, int price, Broker broker, Shareholder shareholder, LocalDateTime entryTime, OrderStatus status, int minimumExecutionQuantity , long requestId) {
+        this.orderId = orderId;
+        this.security = security;
+        this.side = side;
+        this.quantity = quantity;
+        this.price = price;
+        this.entryTime = entryTime;
+        this.broker = broker;
+        this.shareholder = shareholder;
+        this.status = status;
+        this.minimumExecutionQuantity = minimumExecutionQuantity;
+        this.requestId = requestId;
+    }
+
     public Order(long orderId, Security security, Side side, int quantity, int price, Broker broker, Shareholder shareholder, LocalDateTime entryTime, int minimumExecutionQuantity) {
         this.orderId = orderId;
         this.security = security;
@@ -65,6 +65,7 @@ public class Order {
         this.shareholder = shareholder;
         this.status = OrderStatus.NEW;
         this.minimumExecutionQuantity = minimumExecutionQuantity;
+
     }
 
     public Order(long orderId, Security security, Side side, int quantity, int price, Broker broker, Shareholder shareholder, int minimumExecutionQuantity) {
@@ -104,12 +105,46 @@ public class Order {
         }
     }
 
+    public double getStopPrice(){
+        return 0;
+    }
+
+    public boolean inactiveOrderQueuesBefore(Order order){ //kasif
+        int entryCompareResult = this.entryTime.compareTo(order.getEntryTime());
+        if (order.getSide() == Side.BUY ){
+            if(this.getStopPrice() < order.getStopPrice()){
+                return true;
+            }
+            else if(this.getStopPrice() == order.getStopPrice()){
+                return entryCompareResult < 0;
+            }
+            else{
+                return false;
+            }
+        }
+        else{
+            if(this.getStopPrice() > order.getStopPrice()){
+                return true;
+            }
+            else if(this.getStopPrice() == order.getStopPrice()){
+                return entryCompareResult < 0;
+            }
+            else{
+                return false; 
+            }
+        }
+    }
+
     public void queue() {
         status = OrderStatus.QUEUED;
     }
 
     public void markAsNew(){
         status = OrderStatus.NEW;
+    }
+
+    public void markAsUpdating(){
+        status = OrderStatus.UPDATING;
     }
     public boolean isQuantityIncreased(int newQuantity) {
         return newQuantity > quantity;
@@ -124,11 +159,9 @@ public class Order {
         return (long)price * quantity;
     }
 
-    public int getTotalQuantity() { return quantity; }
-
-    public void markAsUpdated(){
-        isNew = false;
+    public void setRequestId(long value){
+        requestId = value;
     }
+
+    public int getTotalQuantity() { return quantity; }
 }
-
-

@@ -29,7 +29,7 @@ public class IcebergOrder extends Order {
     }
 
     public IcebergOrder(long orderId, Security security, Side side, int quantity, int price, Broker broker, Shareholder shareholder, int peakSize, int minimumExecutionQuantity) {
-        super(orderId, security, side, quantity, price, broker, shareholder, minimumExecutionQuantity);
+        super(orderId, security, side, quantity, price, broker, shareholder, minimumExecutionQuantity                                                                                                                       );
         this.peakSize = peakSize;
         this.displayedQuantity = Math.min(peakSize, quantity);
     }

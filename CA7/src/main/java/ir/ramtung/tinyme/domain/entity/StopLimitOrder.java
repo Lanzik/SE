@@ -1,67 +1,81 @@
 package ir.ramtung.tinyme.domain.entity;
 
-
-import lombok.EqualsAndHashCode;
-
-import lombok.Getter;
-
-import lombok.ToString;
-
 import ir.ramtung.tinyme.messaging.request.EnterOrderRq;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.time.LocalDateTime;
 
-
+@Setter
 @Getter
-
 @EqualsAndHashCode(callSuper = true)
-
 @ToString(callSuper = true)
-
 public class StopLimitOrder extends Order {
+    double stopPrice ;
+    Boolean isActive ;
 
-
-    protected int stopPrice;
-
-
-    StopLimitOrder(long orderId, Security security, Side side, int quantity, int price, Broker broker, Shareholder shareholder, LocalDateTime entryTime, OrderStatus status, int minimumExecutionQuantity, int stopPrice) {
-
-        super(orderId, security, side, quantity, price, broker, shareholder, entryTime, status, minimumExecutionQuantity);
-
+    public StopLimitOrder(long orderId, Security security, Side side, int quantity, int price, Broker broker, Shareholder shareholder, LocalDateTime entryTime, double stopPrice, OrderStatus status) {
+        super(orderId, security, side, quantity, price, broker, shareholder, entryTime, status , 0);
         this.stopPrice = stopPrice;
-
+        this.isActive = false ; 
     }
 
-
-    StopLimitOrder(long orderId, Security security, Side side, int quantity, int price, Broker broker, Shareholder shareholder, LocalDateTime entryTime, int minimumExecutionQuantity, int stopPrice) {
-
-        this(orderId, security, side, quantity, price, broker, shareholder, entryTime, OrderStatus.NEW, minimumExecutionQuantity, stopPrice);
-
+    public StopLimitOrder(long orderId, Security security, Side side, int quantity, int price, Broker broker, Shareholder shareholder, LocalDateTime entryTime, double stopPrice) {
+        this(orderId, security, side, quantity, price, broker, shareholder, entryTime, stopPrice, OrderStatus.NEW);
+        this.isActive = false ; 
     }
-    
+
+    public StopLimitOrder(long orderId, Security security, Side side, int quantity, int price, Broker broker, Shareholder shareholder, double stopPrice, int minimumExecutionQuantity) {
+        super(orderId, security, side, quantity, price, broker, shareholder, minimumExecutionQuantity);
+        this.stopPrice = stopPrice;
+        this.isActive = false ; 
+    }
+
+    @Override
+    public Order snapshot() {
+        return new StopLimitOrder(orderId, security, side, quantity, price, broker, shareholder, entryTime, stopPrice, OrderStatus.SNAPSHOT);
+    }
+
+    @Override
+    public Order snapshotWithQuantity(int newQuantity) {
+        return new StopLimitOrder(orderId, security, side, newQuantity, price, broker, shareholder, entryTime, stopPrice, OrderStatus.SNAPSHOT);
+    }
+
+    @Override
+    public void queue() {
+        if (isActive)
+            super.queue();
+        else 
+            return ;
+    }
+
     @Override
     public boolean queuesBefore(Order order) {
-        StopLimitOrder stopLimitOrder = (StopLimitOrder) order;
-        return side == Side.BUY ? stopPrice < stopLimitOrder.stopPrice : stopPrice > stopLimitOrder.stopPrice;
-    }
-    
-    public boolean isInactive(int lastTransactionPrice) {
-        return side == Side.BUY ? stopPrice < lastTransactionPrice : stopPrice > lastTransactionPrice;
-    }
-    
-
-
-    @Override
-
-    public void updateFromRequest(EnterOrderRq updateOrderRq) {
-
-        quantity = updateOrderRq.getQuantity();
-
-        price = updateOrderRq.getPrice();
-
-        stopPrice = updateOrderRq.getStopPrice();
-
+        if (order.getSide() == Side.BUY) {
+            return price > stopPrice;
+        } 
+        else {
+            return price < stopPrice;
+        }
     }
 
+    public boolean queuesBefore(StopLimitOrder order) {
+        if (order.getSide() == Side.BUY) {
+            return order.getStopPrice() < stopPrice;
+        } 
+        else {
+            return order.getStopPrice() > stopPrice;
+        }
+    }
 
+    public boolean checkActivation(double lastTradePrice){
+        if(side == Side.SELL){
+            return lastTradePrice <= stopPrice;
+        }
+        else{
+            return lastTradePrice >= stopPrice;
+        }
+    }
 }

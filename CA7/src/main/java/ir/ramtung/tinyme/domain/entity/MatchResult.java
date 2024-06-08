@@ -3,6 +3,9 @@ package ir.ramtung.tinyme.domain.entity;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.NoSuchElementException;
+
+
 
 public final class MatchResult {
     private final MatchingOutcome outcome;
@@ -19,13 +22,21 @@ public final class MatchResult {
     public static MatchResult notEnoughPositions() {
         return new MatchResult(MatchingOutcome.NOT_ENOUGH_POSITIONS, null, new LinkedList<>());
     }
-    public static MatchResult notEnoughInitialTransaction(){
-        return new MatchResult(MatchingOutcome.NOT_ENOUGH_INITIAL_TRANSACTION, null, new LinkedList<>());
+    public static MatchResult notEnoughQuantitiesMatched() {
+        return new MatchResult(MatchingOutcome.NOT_ENOUGH_QUANTITIES_MATCHED, null, new LinkedList<>());
     }
-    public static MatchResult queuedAsInactiveOrder(){
-        return new MatchResult(MatchingOutcome.QUEUED_AS_INACTIVE_ORDER, null, new LinkedList<>());
+    public static MatchResult inactiveOrderEnqueued() {
+        return new MatchResult(MatchingOutcome.INACTIVE_ORDER_ENQUEUED, null, new LinkedList<>());
     }
 
+    public static MatchResult orderEnqueuedAuction() {
+        return new MatchResult(MatchingOutcome.ORDER_ENQUEUED_IN_AUCTION_MODE, null, new LinkedList<>());
+    }
+
+    public static MatchResult traded( List<Trade> trades) {
+        return new MatchResult(MatchingOutcome.TRADED, null, new LinkedList<>(trades));
+    }
+    
     private MatchResult(MatchingOutcome outcome, Order remainder, LinkedList<Trade> trades) {
         this.outcome = outcome;
         this.remainder = remainder;
@@ -39,7 +50,7 @@ public final class MatchResult {
         return remainder;
     }
 
-    public LinkedList<Trade> getTrades() {
+    public LinkedList<Trade> trades() {
         return trades;
     }
 
@@ -64,5 +75,14 @@ public final class MatchResult {
                 "trades=" + trades + ']';
     }
 
+    public double getPrice(){
+        try {
+            return trades.getLast().getPrice();
+        }
+        catch (NoSuchElementException e) {
+            return 0.0; // default
+        }
+    }
+    
 
 }
