@@ -43,19 +43,7 @@ public class OrderBook {
         it.add(order);
     }
     
-    public void stopLimitOrderEnqueue(StopLimitOrder stopLimitOrder){
-        List<Order> queue = getInactiveStopLimitOrdersQueue(stopLimitOrder.getSide() ); 
-        ListIterator<Order> it = queue.listIterator();
-        while (it.hasNext()) {
-            if (stopLimitOrder.queuesBefore(it.next())) {
-                it.previous();
-                break;
-            }
-        }
-        stopLimitOrder.queue();
-        it.add(stopLimitOrder);
 
-    }
 
     public void activeStopLimitOrderEnqueue(Order stopLimitOrder){
         ListIterator<Order> it = activeStopLimitOrders.listIterator();
@@ -202,18 +190,7 @@ public class OrderBook {
             }
         }
     }
-
-    public List<StopLimitOrder> activateStopLimitOrders() {
-
-        List<StopLimitOrder> activatedOrders = new ArrayList<>();
-        
-        if(inactiveSellStopLimitOrders.size() > 0 )
-            activateSellStopLimitOrders();
-        if(inactiveBuyStopLimitOrders.size() > 0)
-            activateBuyStopLimitOrders();
-
-        return activatedOrders;
-    }
+    
 
     public void enqueueByQueue(Order order, List<Order> queue, Predicate<Order> condition) {
 
