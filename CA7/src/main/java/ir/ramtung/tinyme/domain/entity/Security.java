@@ -248,11 +248,10 @@ public class Security {
     private MatchResult openingProcess(Matcher matcher) {
         updateIndicativeOpeningPrice();
 
-        // Combine buy and sell orders for efficient processing
         List<Order> orders = new ArrayList<>();
         orders.addAll(orderBook.getSellQueue());
         orders.addAll(orderBook.getBuyQueue());
-        orders.sort(Comparator.comparing(Order::getPrice).reversed()); // Sort descending by price
+        orders.sort(Comparator.comparing(Order::getPrice).reversed());
 
         LinkedList<Trade> trades = new LinkedList<>();
         for (Order order : orders) {
@@ -262,8 +261,6 @@ public class Security {
             }
             trades.addAll(matchResult.trades());
         }
-
-        // Remove fully executed orders efficiently using streams
         orderBook.getSellQueue().removeIf(order -> order.getQuantity() == 0);
         orderBook.getBuyQueue().removeIf(order -> order.getQuantity() == 0);
 
